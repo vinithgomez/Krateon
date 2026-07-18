@@ -30,7 +30,21 @@ Backend phases 1–7 are complete:
 Remaining: React frontend (customer storefront + admin dashboard), Swagger docs, and
 deployment configuration.
 
+## Repository Structure
+
+This is a monorepo with the backend and (upcoming) frontend as sibling folders:
+
+```
+backend/    → Spring Boot API (Java/Maven) — see below
+frontend/   → React storefront + admin dashboard (not started yet)
+```
+
+All Maven/Spring Boot commands in this README are run from inside `backend/`, not the
+repository root.
+
 ## Package Structure
+
+Under `backend/src/main/java/com/krateon/backend/`:
 
 ```
 controller/   → REST endpoints only, no business logic
@@ -62,6 +76,12 @@ checkout — produces a corresponding `StockMovement` audit record in the same t
 
 ## Setup
 
+All commands below are run from inside `backend/`:
+
+```bash
+cd backend
+```
+
 1. **Create the database**
    ```sql
    CREATE DATABASE krateon_db;
@@ -74,11 +94,11 @@ checkout — produces a corresponding `StockMovement` audit record in the same t
    ```bash
    cp src/main/resources/application.properties.example src/main/resources/application.properties
    ```
-   Then edit `src/main/resources/application.properties`:
+   Then edit `backend/src/main/resources/application.properties`:
    - `spring.datasource.username` / `spring.datasource.password` — your local PostgreSQL credentials
    - `jwt.secret` — generate your own long random secret, e.g. `openssl rand -hex 64`
 
-3. **Run the application**
+3. **Run the application** (from `backend/`)
    ```bash
    mvn spring-boot:run
    ```
@@ -93,6 +113,8 @@ checkout — produces a corresponding `StockMovement` audit record in the same t
    A successful response returns a JWT.
 
 ### Build check only
+
+From `backend/`:
 
 ```bash
 mvn compile

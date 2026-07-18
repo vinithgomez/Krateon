@@ -1,7 +1,23 @@
-# Compiled output
-target/
+# --- Backend (Spring Boot / Maven) ---
+backend/target/
 
-# IDE
+# Local configuration containing real secrets (DB credentials, JWT secret) -
+# never commit this. Copy application.properties.example instead.
+backend/src/main/resources/application.properties
+backend/src/main/resources/application-local.properties
+
+# Local scratch/testing file with real tokens and test credentials
+backend/test.http
+
+# --- Frontend (React / Node) ---
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# --- IDE ---
 .idea/
 *.iml
 *.ipr
@@ -12,22 +28,14 @@ target/
 .settings/
 bin/
 
-# OS
+# --- OS ---
 .DS_Store
 Thumbs.db
 
-# Logs
+# --- Logs ---
 *.log
 logs/
 
-# Local configuration containing real secrets (DB credentials, JWT secret) -
-# never commit this. Copy application.properties.example instead.
-src/main/resources/application.properties
-src/main/resources/application-local.properties
-
-# Environment files
+# --- Environment files (general) ---
 .env
 .env.local
-
-# Local scratch/testing files with real tokens and test credentials
-test.http
