@@ -1,0 +1,24 @@
+spring.application.name=krateon
+
+# PostgreSQL connection - copy this file to application.properties and fill in your own values
+spring.datasource.url=jdbc:postgresql://localhost:5432/krateon_db
+spring.datasource.username=your_db_username
+spring.datasource.password=your_db_password
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+
+# Generate your own long random secret (at least 64 chars, e.g. `openssl rand -hex 64`) - never reuse this placeholder
+jwt.secret=replace-with-your-own-long-random-secret-at-least-64-characters-long-for-hs512
+jwt.expiration.ms=86400000
+
+# Redis cache
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
+spring.data.redis.connect-timeout=2s
+spring.data.redis.timeout=2s
+spring.cache.type=redis
+spring.cache.redis.time-to-live=600000
