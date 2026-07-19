@@ -31,6 +31,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final ReviewService reviewService;
 
     // No eviction needed here: a newly created product has no pre-existing cache entry
     // under its id, so there's nothing stale to invalidate.
@@ -112,6 +113,8 @@ public class ProductService {
                 .description(product.getCategory().getDescription())
                 .build();
 
+        ReviewService.ReviewStats reviewStats = reviewService.getAverageRating(product.getId());
+
         return ProductResponse.builder()
                 .id(product.getId())
                 .name(product.getName())
@@ -120,6 +123,8 @@ public class ProductService {
                 .imageUrl(product.getImageUrl())
                 .category(categoryResponse)
                 .variants(List.of())
+                .averageRating(reviewStats.averageRating())
+                .reviewCount(reviewStats.reviewCount())
                 .build();
     }
 

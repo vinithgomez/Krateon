@@ -11,4 +11,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
     long countByOrderId(Long orderId);
 
+    // Review-gating: a user may only review products they've actually ordered.
+    boolean existsByOrder_User_IdAndProductVariant_Product_Id(Long userId, Long productId);
+
 }

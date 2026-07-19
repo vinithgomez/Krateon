@@ -52,6 +52,11 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
     }
 
+    @ExceptionHandler(ProductNotPurchasedException.class)
+    public ResponseEntity<ErrorResponse> handleProductNotPurchased(ProductNotPurchasedException ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
+    }
+
     @ExceptionHandler(InvalidStockOperationException.class)
     public ResponseEntity<ErrorResponse> handleInvalidStockOperation(InvalidStockOperationException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), null);

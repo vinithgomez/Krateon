@@ -28,4 +28,8 @@ public class ProductResponse {
 
     private List<ProductVariantResponse> variants;
 
+    private Double averageRating;
+
+    private Long reviewCount;
+
 }

@@ -1,5 +1,6 @@
 package com.krateon.backend.service;
 
+import com.krateon.backend.dto.BuyNowRequest;
 import com.krateon.backend.dto.CheckoutResponse;
 import com.krateon.backend.dto.OrderItemResponse;
 import com.krateon.backend.dto.OrderSummaryResponse;
@@ -12,6 +13,7 @@ import com.krateon.backend.entity.OrderItem;
 import com.krateon.backend.entity.OrderStatus;
 import com.krateon.backend.entity.ProductVariant;
 import com.krateon.backend.entity.StockMovementType;
+import com.krateon.backend.entity.User;
 import com.krateon.backend.exception.EmptyCartException;
 import com.krateon.backend.exception.InsufficientStockException;
 import com.krateon.backend.exception.InvalidOrderStatusTransitionException;
@@ -20,6 +22,7 @@ import com.krateon.backend.repository.CartItemRepository;
 import com.krateon.backend.repository.InventoryRepository;
 import com.krateon.backend.repository.OrderItemRepository;
 import com.krateon.backend.repository.OrderRepository;
+import com.krateon.backend.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -45,8 +48,12 @@ public class OrderService {
     private final CartService cartService;
     private final InventoryRepository inventoryRepository;
     private final InventoryService inventoryService;
+    private final ProductVariantRepository productVariantRepository;
 
     private record LineItem(ProductVariant productVariant, Integer quantity, BigDecimal priceAtPurchase) {
+    }
+
+    private record RequestedLine(ProductVariant productVariant, Integer quantity) {
     }
 
     @Transactional
@@ -58,19 +65,45 @@ public class OrderService {
             throw new EmptyCartException("Cannot checkout: cart is empty");
         }
 
+        List<RequestedLine> requestedLines = cartItems.stream()
+                .map(item -> new RequestedLine(item.getProductVariant(), item.getQuantity()))
+                .toList();
+
+        CheckoutResponse response = placeOrder(cart.getUser(), requestedLines, "Order checkout");
+        cartService.clearCart(userId);
+
+        return response;
+    }
+
+    @Transactional
+    public CheckoutResponse buyNow(User user, BuyNowRequest request) {
+        ProductVariant productVariant = productVariantRepository.findById(request.getProductVariantId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Product variant not found with id: " + request.getProductVariantId()));
+
+        List<RequestedLine> requestedLines = List.of(new RequestedLine(productVariant, request.getQuantity()));
+
+        return placeOrder(user, requestedLines, "Buy now checkout");
+    }
+
+    // Shared by checkout() and buyNow(): locks inventory, deducts stock, and creates the
+    // Order/OrderItem/StockMovement records. Both callers only differ in how they assemble
+    // the requested (variant, quantity) lines - checkout() from the cart, buyNow() from a
+    // single direct request - and in the StockMovement reason text for audit purposes.
+    private CheckoutResponse placeOrder(User user, List<RequestedLine> requestedLines, String stockMovementReason) {
         // Lock inventory rows in a consistent order (by product variant id) across all checkouts
         // so two concurrent multi-item checkouts can never take pessimistic locks in opposite
         // orders and deadlock against each other.
-        List<CartItem> sortedItems = cartItems.stream()
-                .sorted(Comparator.comparing(item -> item.getProductVariant().getId()))
+        List<RequestedLine> sortedLines = requestedLines.stream()
+                .sorted(Comparator.comparing(line -> line.productVariant().getId()))
                 .toList();
 
         List<LineItem> lineItems = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
 
-        for (CartItem cartItem : sortedItems) {
-            ProductVariant productVariant = cartItem.getProductVariant();
-            Integer quantity = cartItem.getQuantity();
+        for (RequestedLine requestedLine : sortedLines) {
+            ProductVariant productVariant = requestedLine.productVariant();
+            Integer quantity = requestedLine.quantity();
 
             Inventory inventory = inventoryRepository.findByProductVariantId(productVariant.getId()).stream()
                     .filter(inv -> inv.getQuantity() >= quantity)
@@ -84,7 +117,7 @@ public class OrderService {
                     .inventoryId(inventory.getId())
                     .changeQty(quantity)
                     .type(StockMovementType.SALE)
-                    .reason("Order checkout")
+                    .reason(stockMovementReason)
                     .build());
 
             BigDecimal priceAtPurchase = productVariant.getProduct().getPrice();
@@ -93,7 +126,7 @@ public class OrderService {
         }
 
         Order savedOrder = orderRepository.save(Order.builder()
-                .user(cart.getUser())
+                .user(user)
                 .status(OrderStatus.PLACED)
                 .totalAmount(totalAmount)
                 .build());
@@ -107,8 +140,6 @@ public class OrderService {
                         .build())
                 .toList();
         orderItemRepository.saveAll(orderItems);
-
-        cartService.clearCart(userId);
 
         return toCheckoutResponse(savedOrder, orderItems);
     }

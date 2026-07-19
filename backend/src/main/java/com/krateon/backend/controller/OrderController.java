@@ -1,5 +1,6 @@
 package com.krateon.backend.controller;
 
+import com.krateon.backend.dto.BuyNowRequest;
 import com.krateon.backend.dto.CheckoutResponse;
 import com.krateon.backend.dto.OrderStatusUpdateRequest;
 import com.krateon.backend.dto.OrderSummaryResponse;
@@ -31,6 +32,12 @@ public class OrderController {
     @PostMapping("/api/orders/checkout")
     public ResponseEntity<CheckoutResponse> checkout() {
         CheckoutResponse response = orderService.checkout(currentUserProvider.getCurrentUserId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/api/orders/buy-now")
+    public ResponseEntity<CheckoutResponse> buyNow(@Valid @RequestBody BuyNowRequest request) {
+        CheckoutResponse response = orderService.buyNow(currentUserProvider.getCurrentUser(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
