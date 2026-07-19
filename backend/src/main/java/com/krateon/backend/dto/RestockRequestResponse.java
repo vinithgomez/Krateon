@@ -1,6 +1,7 @@
 package com.krateon.backend.dto;
 
 import com.krateon.backend.entity.RestockStatus;
+import com.krateon.backend.entity.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,6 +18,10 @@ public class RestockRequestResponse {
     private Long id;
 
     private SupplierResponse supplier;
+
+    private Long productVariantId;
+
+    private Size size;
 
     private ProductSummaryResponse product;
 

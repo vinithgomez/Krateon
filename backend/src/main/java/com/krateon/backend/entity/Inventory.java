@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "inventories", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_inventory_product_warehouse", columnNames = {"product_id", "warehouse_id"})
+        @UniqueConstraint(name = "uk_inventory_variant_warehouse", columnNames = {"product_variant_id", "warehouse_id"})
 })
 @Data
 @NoArgsConstructor
@@ -30,8 +30,8 @@ public class Inventory {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
+    @JoinColumn(name = "product_variant_id", nullable = false)
+    private ProductVariant productVariant;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "warehouse_id", nullable = false)

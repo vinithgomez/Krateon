@@ -3,12 +3,14 @@ package com.krateon.backend.service;
 import com.krateon.backend.dto.CategoryResponse;
 import com.krateon.backend.dto.ProductRequest;
 import com.krateon.backend.dto.ProductResponse;
+import com.krateon.backend.dto.ProductVariantResponse;
 import com.krateon.backend.entity.Category;
 import com.krateon.backend.entity.Product;
 import com.krateon.backend.exception.ResourceNotFoundException;
 import com.krateon.backend.repository.CategoryRepository;
 import com.krateon.backend.repository.ProductRepository;
 import com.krateon.backend.repository.ProductSpecifications;
+import com.krateon.backend.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -19,6 +21,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -27,6 +30,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final ProductVariantRepository productVariantRepository;
 
     // No eviction needed here: a newly created product has no pre-existing cache entry
     // under its id, so there's nothing stale to invalidate.
@@ -67,7 +71,17 @@ public class ProductService {
     @Cacheable(value = "products", key = "#id")
     public ProductResponse getById(Long id) {
         log.info("CACHE MISS - loading product {} from the database", id);
-        return toResponse(findProductOrThrow(id));
+        ProductResponse response = toResponse(findProductOrThrow(id));
+
+        List<ProductVariantResponse> variants = productVariantRepository.findByProductId(id).stream()
+                .map(variant -> ProductVariantResponse.builder()
+                        .id(variant.getId())
+                        .size(variant.getSize())
+                        .build())
+                .toList();
+        response.setVariants(variants);
+
+        return response;
     }
 
     public Page<ProductResponse> search(Long categoryId, BigDecimal minPrice, BigDecimal maxPrice,
@@ -105,6 +119,7 @@ public class ProductService {
                 .price(product.getPrice())
                 .imageUrl(product.getImageUrl())
                 .category(categoryResponse)
+                .variants(List.of())
                 .build();
     }
 

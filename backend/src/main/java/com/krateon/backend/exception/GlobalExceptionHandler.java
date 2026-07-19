@@ -27,6 +27,11 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), null);
     }
 
+    @ExceptionHandler(ProductVariantAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleProductVariantAlreadyExists(ProductVariantAlreadyExistsException ex) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), null);
+    }
+
     @ExceptionHandler(RestockRequestAlreadyFulfilledException.class)
     public ResponseEntity<ErrorResponse> handleRestockRequestAlreadyFulfilled(RestockRequestAlreadyFulfilledException ex) {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), null);

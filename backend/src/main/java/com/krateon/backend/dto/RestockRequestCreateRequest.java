@@ -16,8 +16,8 @@ public class RestockRequestCreateRequest {
     @NotNull(message = "Supplier id is required")
     private Long supplierId;
 
-    @NotNull(message = "Product id is required")
-    private Long productId;
+    @NotNull(message = "Product variant id is required")
+    private Long productVariantId;
 
     @NotNull(message = "Warehouse id is required")
     private Long warehouseId;

@@ -7,7 +7,7 @@ import com.krateon.backend.dto.StockAdjustmentRequest;
 import com.krateon.backend.dto.SupplierResponse;
 import com.krateon.backend.dto.WarehouseResponse;
 import com.krateon.backend.entity.Inventory;
-import com.krateon.backend.entity.Product;
+import com.krateon.backend.entity.ProductVariant;
 import com.krateon.backend.entity.RestockRequest;
 import com.krateon.backend.entity.RestockStatus;
 import com.krateon.backend.entity.StockMovementType;
@@ -16,7 +16,7 @@ import com.krateon.backend.entity.Warehouse;
 import com.krateon.backend.exception.ResourceNotFoundException;
 import com.krateon.backend.exception.RestockRequestAlreadyFulfilledException;
 import com.krateon.backend.repository.InventoryRepository;
-import com.krateon.backend.repository.ProductRepository;
+import com.krateon.backend.repository.ProductVariantRepository;
 import com.krateon.backend.repository.RestockRequestRepository;
 import com.krateon.backend.repository.SupplierRepository;
 import com.krateon.backend.repository.WarehouseRepository;
@@ -32,7 +32,7 @@ public class RestockRequestService {
 
     private final RestockRequestRepository restockRequestRepository;
     private final SupplierRepository supplierRepository;
-    private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
     private final WarehouseRepository warehouseRepository;
     private final InventoryRepository inventoryRepository;
     private final InventoryService inventoryService;
@@ -40,14 +40,15 @@ public class RestockRequestService {
     public RestockRequestResponse createRestockRequest(RestockRequestCreateRequest request) {
         Supplier supplier = supplierRepository.findById(request.getSupplierId())
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id: " + request.getSupplierId()));
-        Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + request.getProductId()));
+        ProductVariant productVariant = productVariantRepository.findById(request.getProductVariantId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Product variant not found with id: " + request.getProductVariantId()));
         Warehouse warehouse = warehouseRepository.findById(request.getWarehouseId())
                 .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found with id: " + request.getWarehouseId()));
 
         RestockRequest restockRequest = RestockRequest.builder()
                 .supplier(supplier)
-                .product(product)
+                .productVariant(productVariant)
                 .warehouse(warehouse)
                 .quantity(request.getQuantity())
                 .status(RestockStatus.PENDING)
@@ -65,10 +66,10 @@ public class RestockRequestService {
                     "Restock request #" + id + " has already been fulfilled (status: " + restockRequest.getStatus() + ")");
         }
 
-        Inventory inventory = inventoryRepository.findByProductIdAndWarehouseId(
-                        restockRequest.getProduct().getId(), restockRequest.getWarehouse().getId())
+        Inventory inventory = inventoryRepository.findByProductVariantIdAndWarehouseId(
+                        restockRequest.getProductVariant().getId(), restockRequest.getWarehouse().getId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "No inventory row exists for product id " + restockRequest.getProduct().getId()
+                        "No inventory row exists for product variant id " + restockRequest.getProductVariant().getId()
                                 + " at warehouse id " + restockRequest.getWarehouse().getId()
                                 + ". Initialize inventory via /api/admin/inventory before fulfilling this restock request."));
 
@@ -110,6 +111,8 @@ public class RestockRequestService {
     }
 
     private RestockRequestResponse toResponse(RestockRequest restockRequest) {
+        ProductVariant variant = restockRequest.getProductVariant();
+
         SupplierResponse supplierResponse = SupplierResponse.builder()
                 .id(restockRequest.getSupplier().getId())
                 .name(restockRequest.getSupplier().getName())
@@ -118,9 +121,9 @@ public class RestockRequestService {
                 .build();
 
         ProductSummaryResponse productSummary = ProductSummaryResponse.builder()
-                .id(restockRequest.getProduct().getId())
-                .name(restockRequest.getProduct().getName())
-                .price(restockRequest.getProduct().getPrice())
+                .id(variant.getProduct().getId())
+                .name(variant.getProduct().getName())
+                .price(variant.getProduct().getPrice())
                 .build();
 
         WarehouseResponse warehouseResponse = WarehouseResponse.builder()
@@ -132,6 +135,8 @@ public class RestockRequestService {
         return RestockRequestResponse.builder()
                 .id(restockRequest.getId())
                 .supplier(supplierResponse)
+                .productVariantId(variant.getId())
+                .size(variant.getSize())
                 .product(productSummary)
                 .warehouse(warehouseResponse)
                 .quantity(restockRequest.getQuantity())

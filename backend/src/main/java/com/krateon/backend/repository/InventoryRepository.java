@@ -12,9 +12,12 @@ import java.util.Optional;
 
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
-    Optional<Inventory> findByProductIdAndWarehouseId(Long productId, Long warehouseId);
+    Optional<Inventory> findByProductVariantIdAndWarehouseId(Long productVariantId, Long warehouseId);
 
-    List<Inventory> findByProductId(Long productId);
+    List<Inventory> findByProductVariantId(Long productVariantId);
+
+    // Used by admin views that show stock across every size variant of a product at a glance.
+    List<Inventory> findByProductVariant_Product_Id(Long productId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT i FROM Inventory i WHERE i.id = :id")

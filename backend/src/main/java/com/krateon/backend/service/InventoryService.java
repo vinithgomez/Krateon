@@ -7,7 +7,7 @@ import com.krateon.backend.dto.StockAdjustmentRequest;
 import com.krateon.backend.dto.StockMovementResponse;
 import com.krateon.backend.dto.WarehouseResponse;
 import com.krateon.backend.entity.Inventory;
-import com.krateon.backend.entity.Product;
+import com.krateon.backend.entity.ProductVariant;
 import com.krateon.backend.entity.StockMovement;
 import com.krateon.backend.entity.StockMovementType;
 import com.krateon.backend.entity.Warehouse;
@@ -16,6 +16,7 @@ import com.krateon.backend.exception.InventoryAlreadyExistsException;
 import com.krateon.backend.exception.ResourceNotFoundException;
 import com.krateon.backend.repository.InventoryRepository;
 import com.krateon.backend.repository.ProductRepository;
+import com.krateon.backend.repository.ProductVariantRepository;
 import com.krateon.backend.repository.StockMovementRepository;
 import com.krateon.backend.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,26 +33,28 @@ public class InventoryService {
 
     private final InventoryRepository inventoryRepository;
     private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
     private final WarehouseRepository warehouseRepository;
     private final StockMovementRepository stockMovementRepository;
 
     @Transactional
     public InventoryResponse createInventory(InventoryRequest request) {
-        Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + request.getProductId()));
+        ProductVariant productVariant = productVariantRepository.findById(request.getProductVariantId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Product variant not found with id: " + request.getProductVariantId()));
         Warehouse warehouse = warehouseRepository.findById(request.getWarehouseId())
                 .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found with id: " + request.getWarehouseId()));
 
-        inventoryRepository.findByProductIdAndWarehouseId(request.getProductId(), request.getWarehouseId())
+        inventoryRepository.findByProductVariantIdAndWarehouseId(request.getProductVariantId(), request.getWarehouseId())
                 .ifPresent(existing -> {
                     throw new InventoryAlreadyExistsException(
-                            "Inventory already exists for product id " + request.getProductId()
+                            "Inventory already exists for product variant id " + request.getProductVariantId()
                                     + " at warehouse id " + request.getWarehouseId()
                                     + ". Use stock adjustment instead of creating a new inventory row.");
                 });
 
         Inventory inventory = Inventory.builder()
-                .product(product)
+                .productVariant(productVariant)
                 .warehouse(warehouse)
                 .quantity(request.getQuantity())
                 .lowStockThreshold(request.getLowStockThreshold())
@@ -111,7 +114,9 @@ public class InventoryService {
             throw new ResourceNotFoundException("Product not found with id: " + productId);
         }
 
-        return inventoryRepository.findByProductId(productId).stream()
+        // Returns stock across every size variant of the product, not just one - a product
+        // with multiple variants has one Inventory row per (variant, warehouse) pair.
+        return inventoryRepository.findByProductVariant_Product_Id(productId).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -132,10 +137,12 @@ public class InventoryService {
     }
 
     private InventoryResponse toResponse(Inventory inventory) {
+        ProductVariant variant = inventory.getProductVariant();
+
         ProductSummaryResponse productSummary = ProductSummaryResponse.builder()
-                .id(inventory.getProduct().getId())
-                .name(inventory.getProduct().getName())
-                .price(inventory.getProduct().getPrice())
+                .id(variant.getProduct().getId())
+                .name(variant.getProduct().getName())
+                .price(variant.getProduct().getPrice())
                 .build();
 
         WarehouseResponse warehouseResponse = WarehouseResponse.builder()
@@ -146,6 +153,8 @@ public class InventoryService {
 
         return InventoryResponse.builder()
                 .id(inventory.getId())
+                .productVariantId(variant.getId())
+                .size(variant.getSize())
                 .product(productSummary)
                 .warehouse(warehouseResponse)
                 .quantity(inventory.getQuantity())

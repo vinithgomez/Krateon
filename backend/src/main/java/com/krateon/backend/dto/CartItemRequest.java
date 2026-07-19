@@ -13,8 +13,8 @@ import lombok.NoArgsConstructor;
 @Builder
 public class CartItemRequest {
 
-    @NotNull(message = "Product id is required")
-    private Long productId;
+    @NotNull(message = "Product variant id is required")
+    private Long productVariantId;
 
     @NotNull(message = "Quantity is required")
     @PositiveOrZero(message = "Quantity cannot be negative")

@@ -10,7 +10,7 @@ import com.krateon.backend.entity.Inventory;
 import com.krateon.backend.entity.Order;
 import com.krateon.backend.entity.OrderItem;
 import com.krateon.backend.entity.OrderStatus;
-import com.krateon.backend.entity.Product;
+import com.krateon.backend.entity.ProductVariant;
 import com.krateon.backend.entity.StockMovementType;
 import com.krateon.backend.exception.EmptyCartException;
 import com.krateon.backend.exception.InsufficientStockException;
@@ -46,7 +46,7 @@ public class OrderService {
     private final InventoryRepository inventoryRepository;
     private final InventoryService inventoryService;
 
-    private record LineItem(Product product, Integer quantity, BigDecimal priceAtPurchase) {
+    private record LineItem(ProductVariant productVariant, Integer quantity, BigDecimal priceAtPurchase) {
     }
 
     @Transactional
@@ -58,25 +58,26 @@ public class OrderService {
             throw new EmptyCartException("Cannot checkout: cart is empty");
         }
 
-        // Lock inventory rows in a consistent order (by product id) across all checkouts so
-        // two concurrent multi-item checkouts can never take pessimistic locks in opposite
+        // Lock inventory rows in a consistent order (by product variant id) across all checkouts
+        // so two concurrent multi-item checkouts can never take pessimistic locks in opposite
         // orders and deadlock against each other.
         List<CartItem> sortedItems = cartItems.stream()
-                .sorted(Comparator.comparing(item -> item.getProduct().getId()))
+                .sorted(Comparator.comparing(item -> item.getProductVariant().getId()))
                 .toList();
 
         List<LineItem> lineItems = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
 
         for (CartItem cartItem : sortedItems) {
-            Product product = cartItem.getProduct();
+            ProductVariant productVariant = cartItem.getProductVariant();
             Integer quantity = cartItem.getQuantity();
 
-            Inventory inventory = inventoryRepository.findByProductId(product.getId()).stream()
+            Inventory inventory = inventoryRepository.findByProductVariantId(productVariant.getId()).stream()
                     .filter(inv -> inv.getQuantity() >= quantity)
                     .findFirst()
                     .orElseThrow(() -> new InsufficientStockException(
-                            "Insufficient stock for product '" + product.getName() + "': requested " + quantity
+                            "Insufficient stock for product '" + productVariant.getProduct().getName()
+                                    + "' (" + productVariant.getSize() + "): requested " + quantity
                                     + " but no warehouse has enough available stock"));
 
             inventoryService.adjustStock(StockAdjustmentRequest.builder()
@@ -86,8 +87,8 @@ public class OrderService {
                     .reason("Order checkout")
                     .build());
 
-            BigDecimal priceAtPurchase = product.getPrice();
-            lineItems.add(new LineItem(product, quantity, priceAtPurchase));
+            BigDecimal priceAtPurchase = productVariant.getProduct().getPrice();
+            lineItems.add(new LineItem(productVariant, quantity, priceAtPurchase));
             totalAmount = totalAmount.add(priceAtPurchase.multiply(BigDecimal.valueOf(quantity)));
         }
 
@@ -100,7 +101,7 @@ public class OrderService {
         List<OrderItem> orderItems = lineItems.stream()
                 .map(lineItem -> OrderItem.builder()
                         .order(savedOrder)
-                        .product(lineItem.product())
+                        .productVariant(lineItem.productVariant())
                         .quantity(lineItem.quantity())
                         .priceAtPurchase(lineItem.priceAtPurchase())
                         .build())
@@ -158,13 +159,18 @@ public class OrderService {
 
     private CheckoutResponse toCheckoutResponse(Order order, List<OrderItem> orderItems) {
         List<OrderItemResponse> itemResponses = orderItems.stream()
-                .map(orderItem -> OrderItemResponse.builder()
-                        .productId(orderItem.getProduct().getId())
-                        .productName(orderItem.getProduct().getName())
-                        .quantity(orderItem.getQuantity())
-                        .priceAtPurchase(orderItem.getPriceAtPurchase())
-                        .subtotal(orderItem.getPriceAtPurchase().multiply(BigDecimal.valueOf(orderItem.getQuantity())))
-                        .build())
+                .map(orderItem -> {
+                    ProductVariant variant = orderItem.getProductVariant();
+                    return OrderItemResponse.builder()
+                            .productId(variant.getProduct().getId())
+                            .productVariantId(variant.getId())
+                            .size(variant.getSize())
+                            .productName(variant.getProduct().getName())
+                            .quantity(orderItem.getQuantity())
+                            .priceAtPurchase(orderItem.getPriceAtPurchase())
+                            .subtotal(orderItem.getPriceAtPurchase().multiply(BigDecimal.valueOf(orderItem.getQuantity())))
+                            .build();
+                })
                 .toList();
 
         return CheckoutResponse.builder()

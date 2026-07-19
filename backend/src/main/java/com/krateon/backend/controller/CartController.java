@@ -36,17 +36,17 @@ public class CartController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PutMapping("/items/{productId}")
-    public ResponseEntity<CartResponse> updateItemQuantity(@PathVariable Long productId,
+    @PutMapping("/items/{productVariantId}")
+    public ResponseEntity<CartResponse> updateItemQuantity(@PathVariable Long productVariantId,
                                                             @Valid @RequestBody CartItemRequest request) {
         CartResponse response = cartService.updateItemQuantity(
-                currentUserProvider.getCurrentUserId(), productId, request.getQuantity());
+                currentUserProvider.getCurrentUserId(), productVariantId, request.getQuantity());
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/items/{productId}")
-    public ResponseEntity<Void> removeItem(@PathVariable Long productId) {
-        cartService.removeItem(currentUserProvider.getCurrentUserId(), productId);
+    @DeleteMapping("/items/{productVariantId}")
+    public ResponseEntity<Void> removeItem(@PathVariable Long productVariantId) {
+        cartService.removeItem(currentUserProvider.getCurrentUserId(), productVariantId);
         return ResponseEntity.noContent().build();
     }
 

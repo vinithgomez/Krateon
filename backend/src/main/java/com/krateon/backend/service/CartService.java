@@ -6,12 +6,12 @@ import com.krateon.backend.dto.CartResponse;
 import com.krateon.backend.dto.ProductSummaryResponse;
 import com.krateon.backend.entity.Cart;
 import com.krateon.backend.entity.CartItem;
-import com.krateon.backend.entity.Product;
+import com.krateon.backend.entity.ProductVariant;
 import com.krateon.backend.entity.User;
 import com.krateon.backend.exception.ResourceNotFoundException;
 import com.krateon.backend.repository.CartItemRepository;
 import com.krateon.backend.repository.CartRepository;
-import com.krateon.backend.repository.ProductRepository;
+import com.krateon.backend.repository.ProductVariantRepository;
 import com.krateon.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,7 +26,7 @@ public class CartService {
 
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
-    private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
     private final UserRepository userRepository;
 
     @Transactional
@@ -42,13 +42,14 @@ public class CartService {
     @Transactional
     public CartResponse addItem(Long userId, CartItemRequest request) {
         Cart cart = getOrCreateCart(userId);
-        Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + request.getProductId()));
+        ProductVariant productVariant = productVariantRepository.findById(request.getProductVariantId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Product variant not found with id: " + request.getProductVariantId()));
 
-        CartItem item = cartItemRepository.findByCartIdAndProductId(cart.getId(), product.getId())
+        CartItem item = cartItemRepository.findByCartIdAndProductVariantId(cart.getId(), productVariant.getId())
                 .orElseGet(() -> CartItem.builder()
                         .cart(cart)
-                        .product(product)
+                        .productVariant(productVariant)
                         .quantity(0)
                         .build());
 
@@ -59,10 +60,10 @@ public class CartService {
     }
 
     @Transactional
-    public CartResponse updateItemQuantity(Long userId, Long productId, Integer quantity) {
+    public CartResponse updateItemQuantity(Long userId, Long productVariantId, Integer quantity) {
         Cart cart = getOrCreateCart(userId);
-        CartItem item = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product id " + productId + " is not in the cart"));
+        CartItem item = cartItemRepository.findByCartIdAndProductVariantId(cart.getId(), productVariantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product variant id " + productVariantId + " is not in the cart"));
 
         if (quantity == 0) {
             cartItemRepository.delete(item);
@@ -75,10 +76,10 @@ public class CartService {
     }
 
     @Transactional
-    public void removeItem(Long userId, Long productId) {
+    public void removeItem(Long userId, Long productVariantId) {
         Cart cart = getOrCreateCart(userId);
-        CartItem item = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product id " + productId + " is not in the cart"));
+        CartItem item = cartItemRepository.findByCartIdAndProductVariantId(cart.getId(), productVariantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product variant id " + productVariantId + " is not in the cart"));
         cartItemRepository.delete(item);
     }
 
@@ -111,16 +112,19 @@ public class CartService {
     }
 
     private CartItemResponse toCartItemResponse(CartItem item) {
-        BigDecimal subtotal = item.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+        ProductVariant variant = item.getProductVariant();
+        BigDecimal subtotal = variant.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
 
         ProductSummaryResponse productSummary = ProductSummaryResponse.builder()
-                .id(item.getProduct().getId())
-                .name(item.getProduct().getName())
-                .price(item.getProduct().getPrice())
+                .id(variant.getProduct().getId())
+                .name(variant.getProduct().getName())
+                .price(variant.getProduct().getPrice())
                 .build();
 
         return CartItemResponse.builder()
                 .id(item.getId())
+                .productVariantId(variant.getId())
+                .size(variant.getSize())
                 .product(productSummary)
                 .quantity(item.getQuantity())
                 .subtotal(subtotal)
