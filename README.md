@@ -10,7 +10,7 @@ trail. It is **not** a multi-vendor marketplace: one store, one admin team, mult
 - **Database**: PostgreSQL (Spring Data JPA / Hibernate)
 - **Caching**: Redis (product/category read caching with TTL + explicit eviction)
 - **Auth**: Spring Security + JWT (stateless, role-based: `ADMIN` / `CUSTOMER`)
-- **Frontend** (planned): React + Tailwind CSS
+- **Frontend**: React + Vite + TypeScript, Tailwind CSS, shadcn/ui components
 - **API Docs** (planned): Swagger / OpenAPI
 
 ## Current Status
@@ -27,20 +27,25 @@ Backend phases 1–7 are complete:
 7. Redis caching layer for product/category reads, with TTL and explicit write-through
    eviction
 
-Remaining: React frontend (customer storefront + admin dashboard), Swagger docs, and
-deployment configuration.
+Phase 8 (customer storefront frontend) is also complete: home/product-listing page with
+category filtering and search, product detail page, cart, checkout, and order history,
+built against the Phase 1–7 API. The catalog is seeded with a fashion product line
+(clothing, shoes, bags, accessories, watches) — product images live under
+`backend/src/main/resources/static/images/products/`.
+
+Remaining: admin dashboard, Swagger docs, and deployment configuration.
 
 ## Repository Structure
 
-This is a monorepo with the backend and (upcoming) frontend as sibling folders:
+This is a monorepo with the backend and frontend as sibling folders:
 
 ```
 backend/    → Spring Boot API (Java/Maven) — see below
-frontend/   → React storefront + admin dashboard (not started yet)
+frontend/   → React customer storefront (Vite/TypeScript) — see below
 ```
 
-All Maven/Spring Boot commands in this README are run from inside `backend/`, not the
-repository root.
+Maven/Spring Boot commands are run from inside `backend/`; npm/Vite commands are run
+from inside `frontend/` — not the repository root.
 
 ## Package Structure
 
@@ -119,6 +124,39 @@ From `backend/`:
 ```bash
 mvn compile
 ```
+
+## Frontend Setup
+
+All commands below are run from inside `frontend/`:
+
+```bash
+cd frontend
+```
+
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+2. **Configure the API URL**
+
+   Copy the example env file — it already points at a locally running backend:
+   ```bash
+   cp .env.example .env
+   ```
+   `VITE_API_BASE_URL` defaults to `http://localhost:8080`; change it if your backend
+   runs elsewhere.
+
+3. **Run the dev server** (with the backend already running per the section above)
+   ```bash
+   npm run dev
+   ```
+   Vite serves the storefront at `http://localhost:5173`.
+
+4. **Build check only**
+   ```bash
+   npm run build
+   ```
 
 ## API Overview
 
