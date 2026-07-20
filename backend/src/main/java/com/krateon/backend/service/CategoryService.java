@@ -60,7 +60,7 @@ public class CategoryService {
         return toResponse(findCategoryOrThrow(id));
     }
 
-    @Cacheable(value = "categories", key = ALL_CATEGORIES_KEY)
+    @Cacheable(value = "categories", key = ALL_CATEGORIES_KEY, sync = true)
     public List<CategoryResponse> getAll() {
         log.info("CACHE MISS - loading all categories from the database");
         return categoryRepository.findAll().stream()

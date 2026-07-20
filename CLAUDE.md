@@ -49,6 +49,39 @@ a single stock-quantity field on Product.
 4. **Role-based access**: ADMIN endpoints (product/inventory/supplier/order management) must
    be protected separately from CUSTOMER endpoints (browse/cart/checkout/order history).
 
+## Known Regressions to Watch For
+
+### Redis category-cache 500 (Jackson bare-array deserialization)
+This has recurred twice — introduced and fixed in Phase 7, then reappeared during Phase 12
+testing because the fix had silently been lost/reverted. If `GET /api/categories` (or any
+other `@Cacheable` method whose return type is itself a bare `List`/array, not a wrapping
+single object) starts throwing 500s, **check this before re-diagnosing from scratch**:
+
+- **What breaks**: `MismatchedInputException` from Jackson's `AsArrayTypeDeserializer`,
+  surfacing as a 500 on the affected endpoint.
+- **Why**: Jackson's default `DefaultTyping.NON_FINAL` policy (the behavior of the plain
+  no-arg `new GenericJackson2JsonRedisSerializer()` constructor) skips embedding a type id
+  for any `final` runtime class. `Stream.toList()` (used in `CategoryService.getAll()` and
+  similarly-shaped methods) returns `java.util.ImmutableCollections$ListN`, a JDK-internal
+  final class. That makes the cache **write** silently produce an untyped bare JSON array.
+  The cache **read** deserializes against a generic `Object` target (the cache manager erases
+  the concrete return type), which requires an embedded type id — and since one was never
+  written, it fails.
+- **The fix that must be preserved**: `RedisConfig.java` must build its
+  `GenericJackson2JsonRedisSerializer` from a custom `ObjectMapper` configured with
+  `DefaultTyping.EVERYTHING` + `JsonTypeInfo.As.WRAPPER_ARRAY`. This removes the final-class
+  exemption so immutable lists round-trip correctly. **Do not replace this with the plain
+  no-arg `GenericJackson2JsonRedisSerializer()` constructor** — that swap is what caused the
+  regression both times. See the inline comment on `RedisConfig.cacheManager()` for the
+  full mechanism.
+- **Also required**: `sync = true` on `@Cacheable` methods that return collections (e.g.
+  `CategoryService.getAll()`), to prevent a cache-stampede on a cold miss.
+- **Do not misdiagnose this as a race condition.** It is 100% deterministic per cache key —
+  confirmed via log correlation (single-threaded MISS writes the bad value; any later request
+  against that same key fails identically until the key is evicted). It can *look*
+  intermittent from the outside because some requests succeed (any MISS) and others fail (any
+  HIT against an already-poisoned key), but it is not concurrency-related.
+
 ## Caching Strategy (introduced in Phase 7 — do not implement early)
 - Cache: `GET /products`, `GET /categories` (read-heavy, low-write)
 - Evict cache on product create/update/delete or any stock movement affecting a cached product
