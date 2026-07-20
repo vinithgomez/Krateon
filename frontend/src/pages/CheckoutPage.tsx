@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { ApiError, orderApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
@@ -14,16 +14,22 @@ type Status = "processing" | "success" | "error";
 
 export function CheckoutPage() {
   const { refresh } = useCart();
-  const [status, setStatus] = useState<Status>("processing");
-  const [result, setResult] = useState<CheckoutResponse | null>(null);
+  const location = useLocation();
+  // Buy Now bypasses the cart entirely and already has a completed CheckoutResponse by
+  // the time it navigates here - in that case we just render it, no API call needed.
+  const buyNowResult = (location.state as { result?: CheckoutResponse } | null)?.result ?? null;
+
+  const [status, setStatus] = useState<Status>(buyNowResult ? "success" : "processing");
+  const [result, setResult] = useState<CheckoutResponse | null>(buyNowResult);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Checkout is a real, side-effecting mutation (deducts stock, creates an order),
+  // Cart checkout is a real, side-effecting mutation (deducts stock, creates an order),
   // so it must fire exactly once per visit even though React 19's StrictMode
   // intentionally double-invokes effects in development.
   const hasRun = useRef(false);
 
   useEffect(() => {
+    if (buyNowResult) return;
     if (hasRun.current) return;
     hasRun.current = true;
 
@@ -38,7 +44,7 @@ export function CheckoutPage() {
         setErrorMessage(error instanceof ApiError ? error.message : "Checkout failed. Please try again.");
         setStatus("error");
       });
-  }, [refresh]);
+  }, [refresh, buyNowResult]);
 
   if (status === "processing") {
     return (
@@ -79,9 +85,9 @@ export function CheckoutPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {result?.items.map((item) => (
-            <div key={item.productId} className="flex items-center justify-between text-sm">
+            <div key={item.productVariantId} className="flex items-center justify-between text-sm">
               <span>
-                {item.productName} × {item.quantity}
+                {item.productName} ({item.size === "ONE_SIZE" ? "One Size" : item.size}) × {item.quantity}
               </span>
               <span className="font-medium">{formatCurrency(item.subtotal)}</span>
             </div>

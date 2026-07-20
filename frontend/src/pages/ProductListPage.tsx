@@ -6,6 +6,8 @@ import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { CategoryResponse, ProductResponse } from "@/types/api";
 import { ProductCard } from "@/components/ProductCard";
+import { BestSellersSection } from "@/components/BestSellersSection";
+import { RecentlyViewedSection } from "@/components/RecentlyViewedSection";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -137,6 +139,8 @@ export function ProductListPage() {
           </p>
         </div>
       </section>
+
+      {!hasActiveFilters && page === 0 && <BestSellersSection />}
 
       <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <Button
@@ -298,6 +302,8 @@ export function ProductListPage() {
           )}
         </>
       )}
+
+      {!hasActiveFilters && page === 0 && <RecentlyViewedSection />}
     </div>
   );
 }

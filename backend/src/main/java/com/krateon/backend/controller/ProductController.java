@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -48,6 +49,12 @@ public class ProductController {
     @GetMapping("/api/products/{id}")
     public ResponseEntity<ProductResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(productService.getById(id));
+    }
+
+    @GetMapping("/api/products/best-sellers")
+    public ResponseEntity<List<ProductResponse>> getBestSellers(
+            @RequestParam(defaultValue = "8") int limit) {
+        return ResponseEntity.ok(productService.getBestSellers(limit));
     }
 
     @GetMapping("/api/products")

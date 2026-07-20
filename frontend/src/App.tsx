@@ -9,6 +9,7 @@ import { CartPage } from "@/pages/CartPage";
 import { CheckoutPage } from "@/pages/CheckoutPage";
 import { OrderHistoryPage } from "@/pages/OrderHistoryPage";
 import { OrderDetailPage } from "@/pages/OrderDetailPage";
+import { WishlistPage } from "@/pages/WishlistPage";
 
 function App() {
   return (
@@ -23,6 +24,14 @@ function App() {
           element={
             <ProtectedRoute>
               <CartPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/wishlist"
+          element={
+            <ProtectedRoute>
+              <WishlistPage />
             </ProtectedRoute>
           }
         />

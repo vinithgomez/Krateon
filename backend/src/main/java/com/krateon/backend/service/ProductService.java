@@ -5,9 +5,12 @@ import com.krateon.backend.dto.ProductRequest;
 import com.krateon.backend.dto.ProductResponse;
 import com.krateon.backend.dto.ProductVariantResponse;
 import com.krateon.backend.entity.Category;
+import com.krateon.backend.entity.OrderStatus;
 import com.krateon.backend.entity.Product;
 import com.krateon.backend.exception.ResourceNotFoundException;
+import com.krateon.backend.repository.BestSellerProjection;
 import com.krateon.backend.repository.CategoryRepository;
+import com.krateon.backend.repository.OrderItemRepository;
 import com.krateon.backend.repository.ProductRepository;
 import com.krateon.backend.repository.ProductSpecifications;
 import com.krateon.backend.repository.ProductVariantRepository;
@@ -16,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -28,10 +32,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductService {
 
+    private static final int MAX_BEST_SELLERS_LIMIT = 20;
+
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ReviewService reviewService;
+    private final OrderItemRepository orderItemRepository;
 
     // No eviction needed here: a newly created product has no pre-existing cache entry
     // under its id, so there's nothing stale to invalidate.
@@ -94,6 +101,19 @@ public class ProductService {
                 .and(ProductSpecifications.hasKeyword(keyword));
 
         return productRepository.findAll(spec, pageable).map(this::toResponse);
+    }
+
+    public List<ProductResponse> getBestSellers(int limit) {
+        int cappedLimit = Math.min(Math.max(limit, 1), MAX_BEST_SELLERS_LIMIT);
+
+        List<BestSellerProjection> bestSellers = orderItemRepository.findBestSellingProducts(
+                OrderStatus.CANCELLED, PageRequest.of(0, cappedLimit));
+
+        // No caching here by design: order data changes too often for a naive cache to be
+        // worth it at this scale, and this list is short (<=20 products, capped above).
+        return bestSellers.stream()
+                .map(projection -> toResponse(findProductOrThrow(projection.getProductId())))
+                .toList();
     }
 
     private Product findProductOrThrow(Long id) {

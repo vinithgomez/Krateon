@@ -10,31 +10,35 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 
+function sizeLabel(size: string): string {
+  return size === "ONE_SIZE" ? "One Size" : `Size ${size}`;
+}
+
 export function CartPage() {
   const { cart, loading, updateItemQuantity, removeItem } = useCart();
   const navigate = useNavigate();
-  const [pendingProductId, setPendingProductId] = useState<number | null>(null);
+  const [pendingVariantId, setPendingVariantId] = useState<number | null>(null);
 
-  const handleQuantityChange = async (productId: number, quantity: number) => {
-    setPendingProductId(productId);
+  const handleQuantityChange = async (productVariantId: number, quantity: number) => {
+    setPendingVariantId(productVariantId);
     try {
-      await updateItemQuantity(productId, quantity);
+      await updateItemQuantity(productVariantId, quantity);
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Failed to update quantity.");
     } finally {
-      setPendingProductId(null);
+      setPendingVariantId(null);
     }
   };
 
-  const handleRemove = async (productId: number) => {
-    setPendingProductId(productId);
+  const handleRemove = async (productVariantId: number) => {
+    setPendingVariantId(productVariantId);
     try {
-      await removeItem(productId);
+      await removeItem(productVariantId);
       toast.success("Item removed from cart.");
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Failed to remove item.");
     } finally {
-      setPendingProductId(null);
+      setPendingVariantId(null);
     }
   };
 
@@ -68,7 +72,7 @@ export function CartPage() {
 
       <div className="flex flex-col gap-3">
         {cart.items.map((item) => {
-          const isPending = pendingProductId === item.product.id;
+          const isPending = pendingVariantId === item.productVariantId;
           return (
             <Card key={item.id}>
               <CardContent className="flex flex-wrap items-center gap-4">
@@ -77,7 +81,9 @@ export function CartPage() {
                 </div>
 
                 <div className="min-w-40 flex-1">
-                  <p className="font-medium">{item.product.name}</p>
+                  <p className="font-medium">
+                    {item.product.name} - {sizeLabel(item.size)}
+                  </p>
                   <p className="text-sm text-muted-foreground">{formatCurrency(item.product.price)} each</p>
                 </div>
 
@@ -87,7 +93,7 @@ export function CartPage() {
                     variant="ghost"
                     size="icon"
                     disabled={isPending || item.quantity <= 1}
-                    onClick={() => handleQuantityChange(item.product.id, item.quantity - 1)}
+                    onClick={() => handleQuantityChange(item.productVariantId, item.quantity - 1)}
                     aria-label="Decrease quantity"
                   >
                     <Minus className="size-4" />
@@ -98,7 +104,7 @@ export function CartPage() {
                     variant="ghost"
                     size="icon"
                     disabled={isPending}
-                    onClick={() => handleQuantityChange(item.product.id, item.quantity + 1)}
+                    onClick={() => handleQuantityChange(item.productVariantId, item.quantity + 1)}
                     aria-label="Increase quantity"
                   >
                     <Plus className="size-4" />
@@ -112,7 +118,7 @@ export function CartPage() {
                   variant="ghost"
                   size="icon"
                   disabled={isPending}
-                  onClick={() => handleRemove(item.product.id)}
+                  onClick={() => handleRemove(item.productVariantId)}
                   aria-label="Remove item"
                 >
                   <Trash2 className="size-4 text-destructive" />

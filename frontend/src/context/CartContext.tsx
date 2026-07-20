@@ -8,9 +8,9 @@ interface CartContextValue {
   itemCount: number;
   loading: boolean;
   refresh: () => Promise<void>;
-  addItem: (productId: number, quantity: number) => Promise<void>;
-  updateItemQuantity: (productId: number, quantity: number) => Promise<void>;
-  removeItem: (productId: number) => Promise<void>;
+  addItem: (productVariantId: number, quantity: number) => Promise<void>;
+  updateItemQuantity: (productVariantId: number, quantity: number) => Promise<void>;
+  removeItem: (productVariantId: number) => Promise<void>;
 }
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
@@ -29,6 +29,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       const data = await cartApi.get();
       setCart(data);
+    } catch (error) {
+      console.error("Failed to load cart", error);
     } finally {
       setLoading(false);
     }
@@ -38,18 +40,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     void refresh();
   }, [refresh]);
 
-  const addItem = useCallback(async (productId: number, quantity: number) => {
-    const data = await cartApi.addItem({ productId, quantity });
+  const addItem = useCallback(async (productVariantId: number, quantity: number) => {
+    const data = await cartApi.addItem({ productVariantId, quantity });
     setCart(data);
   }, []);
 
-  const updateItemQuantity = useCallback(async (productId: number, quantity: number) => {
-    const data = await cartApi.updateItemQuantity(productId, quantity);
+  const updateItemQuantity = useCallback(async (productVariantId: number, quantity: number) => {
+    const data = await cartApi.updateItemQuantity(productVariantId, quantity);
     setCart(data);
   }, []);
 
-  const removeItem = useCallback(async (productId: number) => {
-    await cartApi.removeItem(productId);
+  const removeItem = useCallback(async (productVariantId: number) => {
+    await cartApi.removeItem(productVariantId);
     await refresh();
   }, [refresh]);
 

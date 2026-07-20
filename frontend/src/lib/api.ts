@@ -1,15 +1,19 @@
 import type {
   AuthResponse,
+  BuyNowRequest,
   CartItemRequest,
   CartResponse,
   CategoryResponse,
   CheckoutResponse,
+  CreateReviewRequest,
   LoginRequest,
   OrderSummaryResponse,
   Page,
   ProductResponse,
   ProductSearchParams,
   RegisterRequest,
+  ReviewResponse,
+  WishlistResponse,
 } from "@/types/api";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
@@ -143,24 +147,49 @@ export const productApi = {
     return request<Page<ProductResponse>>(`/api/products?${query.toString()}`, { auth: false });
   },
   getById: (id: number) => request<ProductResponse>(`/api/products/${id}`, { auth: false }),
+  bestSellers: (limit = 8) =>
+    request<ProductResponse[]>(`/api/products/best-sellers?limit=${limit}`, { auth: false }),
 };
 
 export const cartApi = {
   get: () => request<CartResponse>("/api/cart"),
   addItem: (payload: CartItemRequest) =>
     request<CartResponse>("/api/cart/items", { method: "POST", body: payload }),
-  updateItemQuantity: (productId: number, quantity: number) =>
-    request<CartResponse>(`/api/cart/items/${productId}`, {
+  updateItemQuantity: (productVariantId: number, quantity: number) =>
+    request<CartResponse>(`/api/cart/items/${productVariantId}`, {
       method: "PUT",
-      body: { productId, quantity },
+      body: { productVariantId, quantity },
     }),
-  removeItem: (productId: number) =>
-    request<void>(`/api/cart/items/${productId}`, { method: "DELETE" }),
+  removeItem: (productVariantId: number) =>
+    request<void>(`/api/cart/items/${productVariantId}`, { method: "DELETE" }),
 };
 
 export const orderApi = {
   checkout: () => request<CheckoutResponse>("/api/orders/checkout", { method: "POST" }),
+  buyNow: (payload: BuyNowRequest) =>
+    request<CheckoutResponse>("/api/orders/buy-now", { method: "POST", body: payload }),
   history: (page = 0, size = 10) =>
     request<Page<OrderSummaryResponse>>(`/api/orders?page=${page}&size=${size}`),
   getById: (id: number) => request<CheckoutResponse>(`/api/orders/${id}`),
+};
+
+export const reviewApi = {
+  list: (productId: number, page = 0, size = 10) =>
+    request<Page<ReviewResponse>>(`/api/products/${productId}/reviews?page=${page}&size=${size}`, {
+      auth: false,
+    }),
+  create: (productId: number, payload: CreateReviewRequest) =>
+    request<ReviewResponse>(`/api/products/${productId}/reviews`, { method: "POST", body: payload }),
+  update: (productId: number, payload: CreateReviewRequest) =>
+    request<ReviewResponse>(`/api/products/${productId}/reviews`, { method: "PUT", body: payload }),
+  remove: (productId: number) =>
+    request<void>(`/api/products/${productId}/reviews`, { method: "DELETE" }),
+};
+
+export const wishlistApi = {
+  get: () => request<WishlistResponse>("/api/wishlist"),
+  addItem: (productId: number) =>
+    request<WishlistResponse>("/api/wishlist/items", { method: "POST", body: { productId } }),
+  removeItem: (productId: number) =>
+    request<void>(`/api/wishlist/items/${productId}`, { method: "DELETE" }),
 };

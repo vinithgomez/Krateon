@@ -1,10 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, PackageSearch, User as UserIcon } from "lucide-react";
+import { ShoppingCart, PackageSearch, User as UserIcon, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -13,10 +14,13 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 
 export function Header() {
   const { user, isAuthenticated, logout } = useAuth();
   const { itemCount } = useCart();
+  const { wishlist } = useWishlist();
+  const wishlistCount = wishlist?.items.length ?? 0;
   const navigate = useNavigate();
 
   return (
@@ -31,6 +35,23 @@ export function Header() {
           {isAuthenticated && (
             <Button variant="ghost" size="sm" nativeButton={false} render={<Link to="/orders" />}>
               Orders
+            </Button>
+          )}
+
+          {isAuthenticated && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+              nativeButton={false}
+              render={<Link to="/wishlist" aria-label="View wishlist" />}
+            >
+              <Heart className="size-5" />
+              {wishlistCount > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-5 min-w-5 justify-center rounded-full px-1 text-xs">
+                  {wishlistCount}
+                </Badge>
+              )}
             </Button>
           )}
 
@@ -62,7 +83,9 @@ export function Header() {
                 <span className="hidden sm:inline">{user?.email}</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Signed in as {user?.email}</DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Signed in as {user?.email}</DropdownMenuLabel>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate("/orders")}>
                   Order history
