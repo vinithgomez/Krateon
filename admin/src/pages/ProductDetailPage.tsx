@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError, categoryApi, productApi, productVariantApi } from "@/lib/api";
 import { ALL_SIZES } from "@/types/api";
 import type { CategoryResponse, ProductRequest, ProductVariantResponse, Size } from "@/types/api";
 import { PageHeader } from "@/components/PageHeader";
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -114,6 +115,19 @@ export function ProductDetailPage() {
       toast.error(error instanceof ApiError ? error.message : "Failed to add variant.");
     } finally {
       setAddingVariant(false);
+    }
+  };
+
+  const handleDeleteVariant = async (variantId: number) => {
+    try {
+      await productVariantApi.remove(productId, variantId);
+      toast.success("Variant deleted.");
+      loadVariants();
+    } catch (error) {
+      // The backend returns a clear 409 when the variant still has inventory/cart/order/
+      // restock references, instead of a misleading 500 or 503.
+      toast.error(error instanceof ApiError ? error.message : "Failed to delete variant.");
+      throw error;
     }
   };
 
@@ -238,8 +252,22 @@ export function ProductDetailPage() {
             ) : (
               <div className="flex flex-wrap gap-2">
                 {variants.map((variant) => (
-                  <Badge key={variant.id} variant="secondary" className="text-sm">
+                  <Badge key={variant.id} variant="secondary" className="gap-1 text-sm">
                     {sizeLabel(variant.size)}
+                    <ConfirmDeleteDialog
+                      trigger={
+                        <button
+                          type="button"
+                          className="-mr-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive"
+                          aria-label={`Delete ${sizeLabel(variant.size)} variant`}
+                        >
+                          <X className="size-3" />
+                        </button>
+                      }
+                      title={`Delete ${sizeLabel(variant.size)} variant?`}
+                      description="This cannot be undone, and will fail if the variant has existing inventory, cart items, orders, or restock requests."
+                      onConfirm={() => handleDeleteVariant(variant.id)}
+                    />
                   </Badge>
                 ))}
               </div>

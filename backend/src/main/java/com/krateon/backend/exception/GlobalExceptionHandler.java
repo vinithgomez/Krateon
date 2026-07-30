@@ -3,6 +3,7 @@ package com.krateon.backend.exception;
 import com.krateon.backend.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -34,6 +35,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RestockRequestAlreadyFulfilledException.class)
     public ResponseEntity<ErrorResponse> handleRestockRequestAlreadyFulfilled(RestockRequestAlreadyFulfilledException ex) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), null);
+    }
+
+    @ExceptionHandler(ProductHasRealActivityException.class)
+    public ResponseEntity<ErrorResponse> handleProductHasRealActivity(ProductHasRealActivityException ex) {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), null);
     }
 
@@ -70,6 +76,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
         return buildResponse(HttpStatus.UNAUTHORIZED, "Invalid email or password", null);
+    }
+
+    // Must be registered ahead of the DataAccessException handler below:
+    // DataIntegrityViolationException (e.g. a foreign key constraint violation from deleting
+    // a still-referenced row) is a subtype of DataAccessException, and is a normal business
+    // error - not an infrastructure outage. Without this handler it falls through to the
+    // catch-all and gets misreported as a 503 "data store unavailable", which sent admins
+    // chasing a Redis/DB outage that didn't exist.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        log.warn("Data integrity violation (e.g. a foreign key constraint from a still-referenced row)", ex);
+        return buildResponse(HttpStatus.CONFLICT,
+                "This action cannot be completed because the record is still referenced by other data.", null);
     }
 
     @ExceptionHandler(DataAccessException.class)

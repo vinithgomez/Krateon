@@ -18,6 +18,10 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
     // Review-gating: a user may only review products they've actually ordered.
     boolean existsByOrder_User_IdAndProductVariant_Product_Id(Long userId, Long productId);
 
+    // Force-delete safety check: a product with any real order history must never be
+    // force-deleted, even by an admin - that would corrupt real audit/order data.
+    boolean existsByProductVariant_Product_Id(Long productId);
+
     @Query("SELECT oi.productVariant.product.id AS productId, SUM(oi.quantity) AS totalQuantity "
             + "FROM OrderItem oi "
             + "WHERE oi.order.status <> :excludedStatus "

@@ -12,4 +12,8 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
 
     Optional<CartItem> findByCartIdAndProductVariantId(Long cartId, Long productVariantId);
 
+    // Force-delete safety check: an active cart holding this product counts as real customer
+    // activity, so force-delete must refuse to touch it.
+    boolean existsByProductVariant_Product_Id(Long productId);
+
 }

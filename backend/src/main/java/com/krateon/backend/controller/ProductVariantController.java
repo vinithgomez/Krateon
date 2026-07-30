@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,6 +34,12 @@ public class ProductVariantController {
     @GetMapping
     public ResponseEntity<List<ProductVariantResponse>> list(@PathVariable Long productId) {
         return ResponseEntity.ok(productVariantService.listVariants(productId));
+    }
+
+    @DeleteMapping("/{variantId}")
+    public ResponseEntity<Void> delete(@PathVariable Long productId, @PathVariable Long variantId) {
+        productVariantService.deleteVariant(productId, variantId);
+        return ResponseEntity.noContent().build();
     }
 
 }

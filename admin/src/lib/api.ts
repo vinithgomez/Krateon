@@ -163,6 +163,7 @@ export const productApi = {
   update: (id: number, payload: ProductRequest) =>
     request<ProductResponse>(`/api/admin/products/${id}`, { method: "PUT", body: payload }),
   remove: (id: number) => request<void>(`/api/admin/products/${id}`, { method: "DELETE" }),
+  forceRemove: (id: number) => request<void>(`/api/admin/products/${id}/force`, { method: "DELETE" }),
 };
 
 export const productVariantApi = {
@@ -173,6 +174,8 @@ export const productVariantApi = {
       method: "POST",
       body: payload,
     }),
+  remove: (productId: number, variantId: number) =>
+    request<void>(`/api/admin/products/${productId}/variants/${variantId}`, { method: "DELETE" }),
 };
 
 export const warehouseApi = {

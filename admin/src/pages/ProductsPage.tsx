@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import type { CategoryResponse, ProductRequest, ProductResponse } from "@/types/api";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
-import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
+import { DeleteProductDialog } from "@/components/products/DeleteProductDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,17 +100,6 @@ export function ProductsPage() {
       toast.error(error instanceof ApiError ? error.message : "Failed to create product.");
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    try {
-      await productApi.remove(id);
-      toast.success("Product deleted.");
-      loadProducts();
-    } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : "Failed to delete product.");
-      throw error;
     }
   };
 
@@ -263,15 +252,14 @@ export function ProductsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                      <ConfirmDeleteDialog
+                      <DeleteProductDialog
+                        product={product}
                         trigger={
                           <Button variant="ghost" size="icon-sm" aria-label="Delete">
                             <Trash2 className="size-3.5 text-destructive" />
                           </Button>
                         }
-                        title={`Delete "${product.name}"?`}
-                        description="This cannot be undone, and will fail if the product has existing orders, cart items, or inventory."
-                        onConfirm={() => handleDelete(product.id)}
+                        onDeleted={loadProducts}
                       />
                     </TableCell>
                   </TableRow>

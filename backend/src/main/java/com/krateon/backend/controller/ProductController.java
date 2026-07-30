@@ -46,6 +46,12 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/api/admin/products/{id}/force")
+    public ResponseEntity<Void> forceDelete(@PathVariable Long id) {
+        productService.forceDelete(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/api/products/{id}")
     public ResponseEntity<ProductResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(productService.getById(id));

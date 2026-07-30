@@ -50,6 +50,27 @@ public class ProductVariantService {
                 .toList();
     }
 
+    // Relies on the product_id/product_variant_id foreign key constraints on inventory,
+    // cart_items, order_items, and restock_requests to reject the delete - GlobalExceptionHandler
+    // translates the resulting DataIntegrityViolationException into a 409. Do not add a manual
+    // reference check here; it would just duplicate what the database already enforces.
+    @Transactional
+    public void deleteVariant(Long productId, Long variantId) {
+        ProductVariant variant = findVariantOrThrow(productId, variantId);
+        productVariantRepository.delete(variant);
+    }
+
+    private ProductVariant findVariantOrThrow(Long productId, Long variantId) {
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Variant not found with id: " + variantId));
+
+        if (!variant.getProduct().getId().equals(productId)) {
+            throw new ResourceNotFoundException("Variant not found with id: " + variantId);
+        }
+
+        return variant;
+    }
+
     private ProductVariantResponse toResponse(ProductVariant variant) {
         return ProductVariantResponse.builder()
                 .id(variant.getId())
