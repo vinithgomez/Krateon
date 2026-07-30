@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { ClipboardCheck, ClipboardList, Plus } from "lucide-react";
+import { ClipboardCheck, ClipboardList, Plus, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
-import { ApiError, productApi, productVariantApi, restockRequestApi, supplierApi, warehouseApi } from "@/lib/api";
+import { ApiError, inventoryApi, productApi, productVariantApi, restockRequestApi, supplierApi, warehouseApi } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type {
+  InventoryResponse,
   ProductResponse,
   ProductVariantResponse,
   RestockRequestResponse,
@@ -51,6 +52,7 @@ export function RestockRequestsPage() {
   const [warehouses, setWarehouses] = useState<WarehouseResponse[]>([]);
   const [variants, setVariants] = useState<ProductVariantResponse[]>([]);
   const [variantsLoading, setVariantsLoading] = useState(false);
+  const [productInventory, setProductInventory] = useState<InventoryResponse[]>([]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [supplierId, setSupplierId] = useState("");
@@ -85,19 +87,37 @@ export function RestockRequestsPage() {
   const handleProductChange = (value: string) => {
     setProductId(value);
     setVariantId("");
+    setWarehouseId("");
     setVariantsLoading(true);
     productVariantApi
       .list(Number(value))
       .then(setVariants)
       .catch(() => setVariants([]))
       .finally(() => setVariantsLoading(false));
+    // Reused to figure out, per variant, which warehouses already have an Inventory row -
+    // avoids the admin picking a variant/warehouse combo that will 404 later at fulfill time.
+    inventoryApi
+      .byProduct(Number(value))
+      .then(setProductInventory)
+      .catch(() => setProductInventory([]));
   };
+
+  const handleVariantChange = (value: string) => {
+    setVariantId(value);
+    setWarehouseId("");
+  };
+
+  const warehouseIdsWithInventory = new Set(
+    productInventory.filter((inv) => String(inv.productVariantId) === variantId).map((inv) => inv.warehouse.id),
+  );
+  const selectedVariantHasNoInventory = Boolean(variantId) && !variantsLoading && warehouseIdsWithInventory.size === 0;
 
   const resetForm = () => {
     setSupplierId("");
     setProductId("");
     setVariantId("");
     setVariants([]);
+    setProductInventory([]);
     setWarehouseId("");
     setQuantity("");
   };
@@ -194,7 +214,7 @@ export function RestockRequestsPage() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label>Size</Label>
-                  <Select value={variantId} onValueChange={(v) => v && setVariantId(v)} disabled={!productId || variantsLoading}>
+                  <Select value={variantId} onValueChange={(v) => v && handleVariantChange(v)} disabled={!productId || variantsLoading}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder={variantsLoading ? "Loading..." : "Select a size"} />
                     </SelectTrigger>
@@ -214,13 +234,30 @@ export function RestockRequestsPage() {
                       <SelectValue placeholder="Select a warehouse" />
                     </SelectTrigger>
                     <SelectContent>
-                      {warehouses.map((warehouse) => (
-                        <SelectItem key={warehouse.id} value={String(warehouse.id)}>
-                          {warehouse.name}
-                        </SelectItem>
-                      ))}
+                      {warehouses.map((warehouse) => {
+                        const hasInventory = warehouseIdsWithInventory.has(warehouse.id);
+                        return (
+                          <SelectItem key={warehouse.id} value={String(warehouse.id)}>
+                            {warehouse.name}
+                            {variantId && (
+                              <span className={cn("ml-1.5 text-xs", hasInventory ? "text-green-600 dark:text-green-500" : "text-muted-foreground")}>
+                                {hasInventory ? "(has inventory)" : "(no inventory yet)"}
+                              </span>
+                            )}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
+                  {selectedVariantHasNoInventory && (
+                    <div className="flex items-start gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 py-2 text-xs text-destructive">
+                      <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+                      <span>
+                        This variant has no inventory yet - create inventory first before requesting a restock, or the
+                        request won&apos;t be fulfillable.
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="restock-qty">Quantity</Label>

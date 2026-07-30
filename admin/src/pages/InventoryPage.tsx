@@ -77,16 +77,40 @@ function InventoryTable({ rows, onChanged }: { rows: InventoryResponse[]; onChan
   );
 }
 
+function VariantCoverage({ variants, rows }: { variants: ProductVariantResponse[]; rows: InventoryResponse[] }) {
+  const variantIdsWithInventory = new Set(rows.map((row) => row.productVariantId));
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label>Size variants</Label>
+      <div className="flex flex-wrap gap-2">
+        {variants.map((variant) => {
+          const hasInventory = variantIdsWithInventory.has(variant.id);
+          return (
+            <Badge key={variant.id} variant={hasInventory ? "secondary" : "outline"} className="gap-1 text-sm">
+              {sizeLabel(variant.size)}
+              {!hasInventory && <span className="text-muted-foreground">— no inventory</span>}
+            </Badge>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function BrowseTab({ products }: { products: ProductResponse[] }) {
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [rows, setRows] = useState<InventoryResponse[]>([]);
+  const [variants, setVariants] = useState<ProductVariantResponse[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadInventory = (productId: number) => {
     setLoading(true);
-    inventoryApi
-      .byProduct(productId)
-      .then(setRows)
+    Promise.all([inventoryApi.byProduct(productId), productVariantApi.list(productId)])
+      .then(([inventoryRows, productVariants]) => {
+        setRows(inventoryRows);
+        setVariants(productVariants);
+      })
       .catch((error: unknown) => {
         toast.error(error instanceof ApiError ? error.message : "Failed to load inventory.");
       })
@@ -122,10 +146,15 @@ function BrowseTab({ products }: { products: ProductResponse[] }) {
         <p className="text-sm text-muted-foreground">Select a product above to see its stock across warehouses.</p>
       ) : loading ? (
         <Skeleton className="h-32 w-full rounded-xl" />
-      ) : rows.length === 0 ? (
-        <EmptyState icon={Boxes} title="No inventory rows for this product" description="Use the Create Inventory tab to add stock for it." />
       ) : (
-        <InventoryTable rows={rows} onChanged={() => loadInventory(Number(selectedProductId))} />
+        <>
+          {variants.length > 0 && <VariantCoverage variants={variants} rows={rows} />}
+          {rows.length === 0 ? (
+            <EmptyState icon={Boxes} title="No inventory rows for this product" description="Use the Create Inventory tab to add stock for it." />
+          ) : (
+            <InventoryTable rows={rows} onChanged={() => loadInventory(Number(selectedProductId))} />
+          )}
+        </>
       )}
     </div>
   );
