@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Menu, PackageSearch, LogOut, User as UserIcon } from "lucide-react";
+import { ExternalLink, Menu, PackageSearch, LogOut, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { NavLinks } from "./NavLinks";
+
+const STOREFRONT_URL = import.meta.env.VITE_STOREFRONT_URL || "http://localhost:5173";
 
 export function Topbar() {
   const { user, logout } = useAuth();
@@ -31,27 +33,39 @@ export function Topbar() {
 
       <div className="hidden md:block" />
 
-      <DropdownMenu>
-        <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className="gap-2" />}>
-          <Avatar size="sm">
-            <AvatarFallback className="text-xs">{user?.email.slice(0, 2).toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <span className="hidden sm:inline">{user?.email}</span>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuGroup>
-            <DropdownMenuLabel className="flex items-center gap-1.5">
-              <UserIcon className="size-3.5" />
-              {user?.email}
-            </DropdownMenuLabel>
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={logout}>
-            <LogOut className="size-4" />
-            Log out
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center gap-2">
+        <a
+          href={STOREFRONT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground sm:flex"
+        >
+          View Storefront
+          <ExternalLink className="size-3" />
+        </a>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className="gap-2" />}>
+            <Avatar size="sm">
+              <AvatarFallback className="text-xs">{user?.email.slice(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <span className="hidden sm:inline">{user?.email}</span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="flex items-center gap-1.5">
+                <UserIcon className="size-3.5" />
+                {user?.email}
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={logout}>
+              <LogOut className="size-4" />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
         <SheetContent side="left" className="w-64 p-0">
