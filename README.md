@@ -118,6 +118,29 @@ Runs on **http://localhost:5174**. Log in with an account whose role is `ADMIN` 
 
 All three run independently and concurrently against the same backend.
 
+### Troubleshooting: "Port 8080 was already in use"
+
+If `mvn spring-boot:run` fails with this, a previous backend process (yours or a leftover from an earlier session) is still holding the port. Find and stop it:
+
+**Windows (PowerShell)**
+```powershell
+# Find what's listening on 8080
+netstat -ano | findstr :8080
+# The last column is the PID - kill it
+taskkill /F /PID <pid>
+
+# Or, one-liner that does both:
+Get-Process -Id (Get-NetTCPConnection -LocalPort 8080 -State Listen).OwningProcess | Stop-Process -Force
+```
+
+**macOS / Linux**
+```bash
+lsof -i :8080
+kill -9 <pid>
+```
+
+Then re-run `mvn spring-boot:run`.
+
 ## Known Limitations
 
 Documented honestly rather than hidden:
