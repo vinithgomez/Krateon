@@ -100,14 +100,17 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     throw new ApiError("Could not reach the server. Please check your connection and try again.", 0);
   }
 
-  if (response.status === 401 && auth) {
+  // This admin app only ever stores a token after confirming role=ADMIN at login, and every
+  // protected endpoint requires that same role - there's no "authenticated but still
+  // forbidden" tier an admin can legitimately hit. Spring Security's default entry point
+  // returns 403 (not 401) for a missing/invalid/expired token, since no custom
+  // AuthenticationEntryPoint is configured - so a 403 here means the same thing a 401 does.
+  // Treating them differently left the UI stuck showing a generic "no permission" toast on
+  // every request, in a loop, because the stale token was never actually cleared.
+  if ((response.status === 401 || response.status === 403) && auth) {
     setToken(null);
     unauthorizedHandler?.();
-    throw new ApiError("Your session has expired. Please log in again.", 401);
-  }
-
-  if (response.status === 403 && auth) {
-    throw new ApiError("You don't have permission to perform this action.", 403);
+    throw new ApiError("Your session has expired. Please log in again.", response.status);
   }
 
   if (response.status === 204) {
@@ -147,6 +150,9 @@ export const categoryApi = {
 };
 
 export const productApi = {
+  // Hits the admin-only search endpoint (not the public /api/products) so the admin product
+  // list includes deactivated products too - otherwise there'd be no way to find and
+  // re-activate one.
   list: (params: ProductSearchParams) => {
     const query = new URLSearchParams();
     if (params.categoryId !== undefined) query.set("categoryId", String(params.categoryId));
@@ -155,7 +161,7 @@ export const productApi = {
     if (params.keyword) query.set("keyword", params.keyword);
     query.set("page", String(params.page ?? 0));
     query.set("size", String(params.size ?? 10));
-    return request<Page<ProductResponse>>(`/api/products?${query.toString()}`, { auth: false });
+    return request<Page<ProductResponse>>(`/api/admin/products?${query.toString()}`);
   },
   getById: (id: number) => request<ProductResponse>(`/api/products/${id}`, { auth: false }),
   create: (payload: ProductRequest) =>
@@ -164,6 +170,8 @@ export const productApi = {
     request<ProductResponse>(`/api/admin/products/${id}`, { method: "PUT", body: payload }),
   remove: (id: number) => request<void>(`/api/admin/products/${id}`, { method: "DELETE" }),
   forceRemove: (id: number) => request<void>(`/api/admin/products/${id}/force`, { method: "DELETE" }),
+  setActive: (id: number, active: boolean) =>
+    request<ProductResponse>(`/api/admin/products/${id}/active`, { method: "PUT", body: { active } }),
 };
 
 export const productVariantApi = {

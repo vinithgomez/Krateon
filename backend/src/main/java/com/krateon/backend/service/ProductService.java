@@ -93,6 +93,17 @@ public class ProductService {
         productRepository.delete(product);
     }
 
+    // The reversible alternative to delete()/forceDelete(): pulls a product out of customer
+    // browse/search/best-sellers without touching any of its order/inventory/review history.
+    // Direct-by-id lookup (getById) deliberately still works while inactive, so admin can
+    // view and re-activate a hidden product, and existing bookmarks/cart links don't 404.
+    @CacheEvict(value = "products", key = "#id")
+    public ProductResponse setActive(Long id, boolean active) {
+        Product product = findProductOrThrow(id);
+        product.setActive(active);
+        return toResponse(productRepository.save(product));
+    }
+
     // Cascade-deletes a product that the normal delete() rejected (FK-protected by variants,
     // inventory, or restock requests) - but ONLY when there is no real customer activity to
     // protect. The order/cart activity check is the one thing this method must never bypass:
@@ -149,13 +160,29 @@ public class ProductService {
         return response;
     }
 
+    // Customer-facing browse/search - deactivated products never appear here.
     public Page<ProductResponse> search(Long categoryId, BigDecimal minPrice, BigDecimal maxPrice,
                                          String keyword, Pageable pageable) {
+        return search(categoryId, minPrice, maxPrice, keyword, pageable, true);
+    }
+
+    // Admin product list - shows everything, active or not, so a hidden product can still be
+    // found and re-activated.
+    public Page<ProductResponse> searchForAdmin(Long categoryId, BigDecimal minPrice, BigDecimal maxPrice,
+                                                 String keyword, Pageable pageable) {
+        return search(categoryId, minPrice, maxPrice, keyword, pageable, false);
+    }
+
+    private Page<ProductResponse> search(Long categoryId, BigDecimal minPrice, BigDecimal maxPrice,
+                                          String keyword, Pageable pageable, boolean activeOnly) {
         Specification<Product> spec = Specification
                 .where(ProductSpecifications.hasCategoryId(categoryId))
                 .and(ProductSpecifications.hasMinPrice(minPrice))
                 .and(ProductSpecifications.hasMaxPrice(maxPrice))
                 .and(ProductSpecifications.hasKeyword(keyword));
+        if (activeOnly) {
+            spec = spec.and(ProductSpecifications.isActive());
+        }
 
         return productRepository.findAll(spec, pageable).map(this::toResponse);
     }
@@ -168,8 +195,12 @@ public class ProductService {
 
         // No caching here by design: order data changes too often for a naive cache to be
         // worth it at this scale, and this list is short (<=20 products, capped above).
+        // A deactivated product can still have been a past best-seller - it shouldn't
+        // resurface on the storefront just because it sold well before being hidden.
         return bestSellers.stream()
-                .map(projection -> toResponse(findProductOrThrow(projection.getProductId())))
+                .map(projection -> findProductOrThrow(projection.getProductId()))
+                .filter(Product::isActive)
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -202,6 +233,7 @@ public class ProductService {
                 .variants(List.of())
                 .averageRating(reviewStats.averageRating())
                 .reviewCount(reviewStats.reviewCount())
+                .active(product.isActive())
                 .build();
     }
 

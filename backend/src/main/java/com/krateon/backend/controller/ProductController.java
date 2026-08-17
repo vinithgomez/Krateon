@@ -1,5 +1,6 @@
 package com.krateon.backend.controller;
 
+import com.krateon.backend.dto.ProductActiveRequest;
 import com.krateon.backend.dto.ProductRequest;
 import com.krateon.backend.dto.ProductResponse;
 import com.krateon.backend.service.ProductService;
@@ -50,6 +51,25 @@ public class ProductController {
     public ResponseEntity<Void> forceDelete(@PathVariable Long id) {
         productService.forceDelete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/api/admin/products/{id}/active")
+    public ResponseEntity<ProductResponse> setActive(@PathVariable Long id,
+                                                       @Valid @RequestBody ProductActiveRequest request) {
+        return ResponseEntity.ok(productService.setActive(id, request.getActive()));
+    }
+
+    @GetMapping("/api/admin/products")
+    public ResponseEntity<Page<ProductResponse>> searchForAdmin(
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) String keyword,
+            @PageableDefault(size = 10) Pageable pageable) {
+
+        Page<ProductResponse> results =
+                productService.searchForAdmin(categoryId, minPrice, maxPrice, keyword, pageable);
+        return ResponseEntity.ok(results);
     }
 
     @GetMapping("/api/products/{id}")

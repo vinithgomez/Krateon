@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, Plus, Search, Star, Trash2, X } from "lucide-react";
+import { Eye, EyeOff, Package, Plus, Search, Star, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError, categoryApi, productApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
@@ -66,6 +66,16 @@ export function ProductsPage() {
   };
 
   useEffect(loadProducts, [page, keyword]);
+
+  const handleToggleActive = async (product: ProductResponse) => {
+    try {
+      await productApi.setActive(product.id, !product.active);
+      toast.success(product.active ? `"${product.name}" hidden from the storefront.` : `"${product.name}" is now visible on the storefront.`);
+      loadProducts();
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "Failed to update product visibility.");
+    }
+  };
 
   const applySearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,7 +236,8 @@ export function ProductsPage() {
                   <TableHead>Category</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Rating</TableHead>
-                  <TableHead className="w-16 text-right">Actions</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-24 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -251,16 +262,31 @@ export function ProductsPage() {
                         <span className="text-muted-foreground">No reviews</span>
                       )}
                     </TableCell>
+                    <TableCell>
+                      <Badge variant={product.active ? "secondary" : "outline"}>
+                        {product.active ? "Active" : "Hidden"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                      <DeleteProductDialog
-                        product={product}
-                        trigger={
-                          <Button variant="ghost" size="icon-sm" aria-label="Delete">
-                            <Trash2 className="size-3.5 text-destructive" />
-                          </Button>
-                        }
-                        onDeleted={loadProducts}
-                      />
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={product.active ? "Hide from storefront" : "Show on storefront"}
+                          onClick={() => handleToggleActive(product)}
+                        >
+                          {product.active ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5 text-muted-foreground" />}
+                        </Button>
+                        <DeleteProductDialog
+                          product={product}
+                          trigger={
+                            <Button variant="ghost" size="icon-sm" aria-label="Delete">
+                              <Trash2 className="size-3.5 text-destructive" />
+                            </Button>
+                          }
+                          onDeleted={loadProducts}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

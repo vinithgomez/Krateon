@@ -32,4 +32,6 @@ public class ProductResponse {
 
     private Long reviewCount;
 
+    private boolean active;
+
 }

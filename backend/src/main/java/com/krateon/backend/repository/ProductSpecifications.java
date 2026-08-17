@@ -28,4 +28,8 @@ public final class ProductSpecifications {
                 : cb.like(cb.lower(root.get("name")), "%" + keyword.toLowerCase() + "%");
     }
 
+    public static Specification<Product> isActive() {
+        return (root, query, cb) -> cb.isTrue(root.get("active"));
+    }
+
 }

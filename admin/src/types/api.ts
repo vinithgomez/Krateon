@@ -69,6 +69,7 @@ export interface ProductResponse {
   variants: ProductVariantResponse[];
   averageRating: number;
   reviewCount: number;
+  active: boolean;
 }
 
 export interface ProductRequest {

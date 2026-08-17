@@ -43,4 +43,10 @@ public class Product {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
+    // columnDefinition (not just nullable=false) so ddl-auto=update backfills existing rows
+    // with true when this column is first added, instead of failing the ALTER TABLE.
+    @Builder.Default
+    @Column(nullable = false, columnDefinition = "boolean not null default true")
+    private boolean active = true;
+
 }

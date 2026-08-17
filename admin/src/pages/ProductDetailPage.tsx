@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, X } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError, categoryApi, productApi, productVariantApi } from "@/lib/api";
 import { ALL_SIZES } from "@/types/api";
@@ -30,6 +30,8 @@ export function ProductDetailPage() {
   const [categories, setCategories] = useState<CategoryResponse[]>([]);
   const [form, setForm] = useState<ProductRequest | null>(null);
   const [saving, setSaving] = useState(false);
+  const [active, setActiveState] = useState(true);
+  const [togglingActive, setTogglingActive] = useState(false);
 
   const [variants, setVariants] = useState<ProductVariantResponse[]>([]);
   const [variantsLoading, setVariantsLoading] = useState(true);
@@ -53,6 +55,7 @@ export function ProductDetailPage() {
           imageUrl: product.imageUrl ?? "",
           categoryId: product.category.id,
         });
+        setActiveState(product.active);
       })
       .catch((error: unknown) => {
         if (error instanceof ApiError && error.status === 404) {
@@ -131,6 +134,19 @@ export function ProductDetailPage() {
     }
   };
 
+  const handleToggleActive = async () => {
+    setTogglingActive(true);
+    try {
+      const updated = await productApi.setActive(productId, !active);
+      setActiveState(updated.active);
+      toast.success(updated.active ? "Product is now visible on the storefront." : "Product hidden from the storefront.");
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "Failed to update product visibility.");
+    } finally {
+      setTogglingActive(false);
+    }
+  };
+
   const availableSizes = ALL_SIZES.filter((size) => !variants.some((v) => v.size === size));
 
   if (loading) {
@@ -160,7 +176,19 @@ export function ProductDetailPage() {
         Back to products
       </Link>
 
-      <PageHeader title={form.name} description={`Product #${productId}`} />
+      <PageHeader
+        title={form.name}
+        description={`Product #${productId}`}
+        action={
+          <div className="flex items-center gap-2">
+            <Badge variant={active ? "secondary" : "outline"}>{active ? "Active" : "Hidden"}</Badge>
+            <Button variant="outline" size="sm" disabled={togglingActive} onClick={handleToggleActive}>
+              {active ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+              {togglingActive ? "Updating..." : active ? "Hide from storefront" : "Show on storefront"}
+            </Button>
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
