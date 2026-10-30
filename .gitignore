@@ -39,3 +39,29 @@ logs/
 # --- Environment files (general) ---
 .env
 .env.local
+
+# --- Admin app ---
+admin/node_modules/
+admin/dist/
+admin/.env
+admin/.env.local
+admin/.env.*.local
+
+# --- Backend extras ---
+**/target/
+backend/package-lock.json
+backend/src/main/resources/application-*.properties
+!backend/src/main/resources/application-prod.properties
+backend/test.http
+
+# --- Environment files (keep the .example templates) ---
+.env.*
+!.env.example
+
+# --- Deployment tooling ---
+.vercel/
+.render/
+
+# --- Claude Code local state ---
+.claude/
+CLAUDE.local.md

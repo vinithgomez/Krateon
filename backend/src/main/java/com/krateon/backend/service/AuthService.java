@@ -28,13 +28,13 @@ public class AuthService {
             throw new DuplicateEmailException("An account with email '" + request.getEmail() + "' already exists");
         }
 
-        Role role = request.getRole() != null ? request.getRole() : Role.CUSTOMER;
-
+        // Public registration always creates a CUSTOMER; the requested role is ignored so
+        // nobody can self-register as ADMIN. Promote admins directly in the database.
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(role)
+                .role(Role.CUSTOMER)
                 .build();
 
         User savedUser = userRepository.save(user);
