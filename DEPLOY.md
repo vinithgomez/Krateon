@@ -44,11 +44,10 @@ Framework preset: Vite (build `npm run build`, output `dist`). Then go back to t
 `CORS_ALLOWED_ORIGINS` to the two Vercel URLs, and redeploy it.
 
 ## 5. First admin and data
-Public registration always creates a CUSTOMER. Register on the storefront, then promote yourself:
-
-```sql
-UPDATE users SET role = 'ADMIN' WHERE email = 'you@example.com';
-```
+Public registration always creates a CUSTOMER. Register on the storefront, then set the backend env var
+`ADMIN_EMAILS=you@example.com` (comma-separated for several). On the next start the backend promotes those
+registered users to ADMIN, so no manual SQL is needed. (Direct SQL also works:
+`UPDATE users SET role = 'ADMIN' WHERE email = 'you@example.com';`)
 
 Then add categories, products, warehouses and stock in the admin app. Product images use Unsplash URLs
 (the `image_url` field), so they work anywhere.
