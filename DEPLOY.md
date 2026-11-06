@@ -1,8 +1,8 @@
 # Deploying Krateon
 
 Vercel hosts the two React apps. It cannot run the Spring Boot backend (no Java runtime, no long-lived
-servers), so the backend runs as a Docker container on Render or Railway. Postgres and Redis can be
-added from the Vercel Marketplace (Neon + Upstash) or from the backend host.
+servers), so the backend runs as a Docker container on Render or Railway. Postgres is on Neon (free, no expiry) and Redis is
+Render Key Value, both created separately from the backend.
 
 ```
 Vercel: frontend (storefront)   Vercel: admin   ->   Backend (Docker)   ->   Postgres + Redis

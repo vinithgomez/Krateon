@@ -6,26 +6,12 @@ services:
     plan: free
     healthCheckPath: /api/categories
     envVars:
-      - key: DB_HOST
-        fromDatabase:
-          name: krateon-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: krateon-db
-          property: port
-      - key: DB_NAME
-        fromDatabase:
-          name: krateon-db
-          property: database
+      - key: DB_URL
+        sync: false
       - key: DB_USER
-        fromDatabase:
-          name: krateon-db
-          property: user
+        sync: false
       - key: DB_PASSWORD
-        fromDatabase:
-          name: krateon-db
-          property: password
+        sync: false
       - key: REDIS_URL
         fromService:
           type: keyvalue
@@ -43,9 +29,3 @@ services:
     plan: free
     ipAllowList: []
     maxmemoryPolicy: allkeys-lru
-
-databases:
-  - name: krateon-db
-    plan: free
-    databaseName: krateon_db
-    user: krateon
