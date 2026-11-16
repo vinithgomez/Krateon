@@ -1,5 +1,6 @@
 package com.krateon.backend.security;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -59,6 +60,16 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/images/**").permitAll()
                         .anyRequest().authenticated()
                 )
+                // A missing/expired/invalid token must be a 401 (so the frontends clear the session
+                // and send the user to /login); Spring's default would be a 403, which the apps
+                // treat as "logged in but not allowed". Wrong-role requests still get 403.
+                .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write(
+                            "{\"status\":401,\"error\":\"Unauthorized\","
+                                    + "\"message\":\"Your session has expired. Please log in again.\"}");
+                }))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
